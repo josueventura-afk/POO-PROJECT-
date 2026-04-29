@@ -1,8 +1,9 @@
 from interfaces.evaluable import Evaluable
+from datetime import date
 
 class ControlSalud(Evaluable):
 
-    def __init__(self, fecha: str, peso: float, talla: float, observaciones: str = ""):
+    def __init__(self, fecha: date, peso: float, talla: float, observaciones: str = ""):
         self.fecha = fecha
         self.peso = peso
         self.talla = talla
