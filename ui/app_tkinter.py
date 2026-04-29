@@ -1,96 +1,119 @@
-import tkinter as tk
-from tkinter import messagebox
-
 from models.estudiante import Estudiante
 from models.control_salud import ControlSalud
 
-class AppSaludEscolar:
+import tkinter as tk
+from tkinter import ttk, messagebox, scrolledtext
 
+class AppSaludEscolar:
     def __init__(self, root, sistema, admin, reporte):
         self.root = root
-        self.root.title("Sistema Salud Escolar")
+        self.root.title("Gestión de Salud Escolar")
+        self.root.geometry("500x700")
 
         self.sistema = sistema
         self.admin = admin
         self.reporte = reporte
 
-        # ===== FORMULARIO ESTUDIANTE =====
-        tk.Label(root, text="Código").grid(row=0, column=0)
-        self.codigo = tk.Entry(root)
-        self.codigo.grid(row=0, column=1)
+        style = ttk.Style()
+        style.configure("TLabel", font=("Arial", 10))
+        style.configure("Header.TLabel", font=("Arial", 12, "bold"))
 
-        tk.Label(root, text="Nombre").grid(row=1, column=0)
-        self.nombre = tk.Entry(root)
-        self.nombre.grid(row=1, column=1)
+        self.crear_widgets()
 
-        tk.Label(root, text="Edad").grid(row=2, column=0)
-        self.edad = tk.Entry(root)
-        self.edad.grid(row=2, column=1)
+    def crear_widgets(self):
+        # --- FRAME: DATOS DEL ESTUDIANTE ---
+        frame_est = ttk.LabelFrame(self.root, text=" Registro de Estudiante ", padding=10)
+        frame_est.pack(fill="x", padx=20, pady=10)
+        frame_est.columnconfigure(1, weight=1) 
 
-        tk.Label(root, text="Sexo").grid(row=3, column=0)
-        self.sexo = tk.Entry(root)
-        self.sexo.grid(row=3, column=1)
+        fields = [("Código:", "codigo"), ("Nombre:", "nombre"), 
+                  ("Edad:", "edad"), ("Sexo:", "sexo"), ("Curso:", "curso")]
+        
+        self.entries = {}
+        for i, (label, var_name) in enumerate(fields):
+            ttk.Label(frame_est, text=label).grid(row=i, column=0, sticky="w", pady=2)
+            entry = ttk.Entry(frame_est)
+            entry.grid(row=i, column=1, sticky="ew", padx=5, pady=2) 
+            self.entries[var_name] = entry
 
-        tk.Label(root, text="Curso").grid(row=4, column=0)
-        self.curso = tk.Entry(root)
-        self.curso.grid(row=4, column=1)
+        ttk.Button(frame_est, text="Registrar Estudiante", 
+                   command=self.registrar_estudiante).grid(row=len(fields), columnspan=2, pady=10)
 
-        tk.Button(root, text="Registrar Estudiante",
-                  command=self.registrar_estudiante).grid(row=5, columnspan=2)
+        # --- FRAME: CONTROL DE SALUD ---
+        frame_salud = ttk.LabelFrame(self.root, text=" Control de Salud Mensual ", padding=10)
+        frame_salud.pack(fill="x", padx=20, pady=10)
+        frame_salud.columnconfigure(1, weight=1)
 
-        # ===== CONTROL SALUD =====
-        tk.Label(root, text="Peso").grid(row=6, column=0)
-        self.peso = tk.Entry(root)
-        self.peso.grid(row=6, column=1)
+        ttk.Label(frame_salud, text="Peso (kg):").grid(row=0, column=0, sticky="w")
+        self.entry_peso = ttk.Entry(frame_salud)
+        self.entry_peso.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
 
-        tk.Label(root, text="Talla").grid(row=7, column=0)
-        self.talla = tk.Entry(root)
-        self.talla.grid(row=7, column=1)
+        ttk.Label(frame_salud, text="Talla (m):").grid(row=1, column=0, sticky="w")
+        self.entry_talla = ttk.Entry(frame_salud)
+        self.entry_talla.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
 
-        tk.Button(root, text="Registrar Control",
-                  command=self.registrar_control).grid(row=8, columnspan=2)
+        ttk.Button(frame_salud, text="Registrar Signos Vitales", 
+                   command=self.registrar_control).grid(row=2, columnspan=2, pady=10)
 
-        # ===== REPORTE =====
-        tk.Button(root, text="Generar Reporte",
-                  command=self.generar_reporte).grid(row=9, columnspan=2)
+        # --- FRAME: REPORTE Y RESULTADOS ---
+        frame_rep = ttk.LabelFrame(self.root, text=" Reporte Generado ", padding=10)
+        frame_rep.pack(fill="both", expand=True, padx=20, pady=10)
+
+        self.txt_reporte = scrolledtext.ScrolledText(frame_rep, height=12, font=("Consolas", 10))
+        self.txt_reporte.pack(fill="both", expand=True)
+
+        # El comando debe ser generar_reporte (el método de la UI)
+        ttk.Button(frame_rep, text="Generar y Mostrar Reporte", 
+                   command=self.generar_reporte).pack(pady=5)
 
     # =========================
-    # MÉTODOS UI
+    # MÉTODOS DE LA INTERFAZ
     # =========================
+
     def registrar_estudiante(self):
         try:
             est = Estudiante(
-                self.codigo.get(),
-                self.nombre.get(),
-                int(self.edad.get()),
-                self.sexo.get(),
-                self.curso.get()
+                self.entries["codigo"].get(),
+                self.entries["nombre"].get(),
+                int(self.entries["edad"].get()),
+                self.entries["sexo"].get(),
+                self.entries["curso"].get()
             )
             self.admin.registrar_estudiante(self.sistema, est)
-            messagebox.showinfo("OK", "Estudiante registrado")
+            messagebox.showinfo("Éxito", f"Estudiante {est.nombre_completo} registrado.")
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("Error de Datos", f"Verifica los campos: {e}")
 
     def registrar_control(self):
         try:
+            from datetime import date
             control = ControlSalud(
-                "2026-04-01",
-                float(self.peso.get()),
-                float(self.talla.get())
+                str(date.today()),
+                float(self.entry_peso.get()),
+                float(self.entry_talla.get())
             )
-            self.admin.registrar_control(
-                self.sistema,
-                self.codigo.get(),
-                control
-            )
-            messagebox.showinfo("OK", "Control registrado")
+            codigo = self.entries["codigo"].get()
+            self.admin.registrar_control(self.sistema, codigo, control)
+            messagebox.showinfo("Éxito", "Control médico guardado correctamente.")
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("Error", f"No se pudo registrar el control: {e}")
 
     def generar_reporte(self):
-        self.admin.generar_reporte_individual(
-            self.sistema,
-            self.codigo.get(),
-            self.reporte
-        )
-        messagebox.showinfo("OK", "Reporte generado en consola")
+        """ Este es el método que llama el botón """
+        try:
+            codigo = self.entries["codigo"].get()
+            if not codigo:
+                raise ValueError("Debes ingresar el código del estudiante.")
+
+            # Llamamos a la lógica del admin/docente
+            # Nota: Este método DEBE estar definido en tu clase Docente/Admin
+            resultado = self.admin.generar_reporte_individual(self.sistema, codigo, self.reporte)
+            
+            if resultado is None:
+                resultado = "Aviso: El reporte no devolvió texto. Revisa el return en la clase Docente."
+
+            self.txt_reporte.delete(1.0, tk.END)
+            self.txt_reporte.insert(tk.END, str(resultado))
+            
+        except Exception as e:
+            messagebox.showerror("Error de Reporte", str(e))
