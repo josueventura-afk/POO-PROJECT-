@@ -8,23 +8,62 @@ class Reporte:
         self.fecha_generacion = date.today()
 
     # ===== RF07 =====
-    def generar_reporte_individual(self, estudiante):
-        print(f"\n=== Reporte Individual ({self.formato}) ===")
-        print(f"Fecha: {self.fecha_generacion}")
-        print(f"Estudiante: {estudiante.nombre_completo} | Curso: {estudiante.curso}")
+    def generar_reporte_individual(self, estudiante) -> str:
+        lineas = [
+            f"Reporte Individual ({self.formato})",
+            f"Fecha de generación: {self.fecha_generacion}",
+            "",
+            f"Código: {estudiante.codigo}",
+            f"Nombre: {estudiante.nombre_completo}",
+            f"Fecha de nacimiento: {estudiante.fecha_nacimiento}",
+            f"Edad: {estudiante.edad}",
+            f"Sexo: {estudiante.sexo}",
+            f"Curso: {estudiante.curso}",
+            "",
+            "Controles de salud:",
+        ]
 
-        for c in estudiante.obtener_historial():
-            estado = EvaluadorNutricional.clasificar_estado(c.get_imc())
-            print(f"- {c.fecha} | Peso: {c.peso} | Talla: {c.talla} | IMC: {c.get_imc():.2f} | Estado: {estado}")
+        historial = estudiante.obtener_historial()
+        if not historial:
+            lineas.append("- Sin controles registrados")
+        else:
+            for c in historial:
+                estado = EvaluadorNutricional.clasificar_estado(c.get_imc())
+                lineas.append(
+                    f"- Fecha: {c.fecha} | Fecha de nacimiento: {estudiante.fecha_nacimiento} | "
+                    f"Edad: {estudiante.edad} | Peso: {c.peso.get_valor():.2f} {c.peso.get_unidad()} | "
+                    f"Talla: {c.talla.get_valor():.2f} {c.talla.get_unidad()} | "
+                    f"IMC: {c.get_imc():.2f} | Estado: {estado}"
+                )
 
-    def generar_reporte_general(self, estudiantes):
-        print(f"\n=== Reporte General ({self.formato}) ===")
-        print(f"Fecha: {self.fecha_generacion}")
+        if historial:
+            ultimo = historial[-1]
+            lineas.extend([
+                "",
+                "Resumen del último control:",
+                f"- IMC: {ultimo.get_imc():.2f}",
+                f"- Peso: {ultimo.peso.get_valor():.2f} {ultimo.peso.get_unidad()}",
+                f"- Talla: {ultimo.talla.get_valor():.2f} {ultimo.talla.get_unidad()}",
+                f"- Estado: {EvaluadorNutricional.clasificar_estado(ultimo.get_imc())}",
+            ])
+
+        return "\n".join(lineas)
+
+    def generar_reporte_general(self, estudiantes) -> str:
+        lineas = [
+            f"Reporte General ({self.formato})",
+            f"Fecha de generación: {self.fecha_generacion}",
+            "",
+        ]
 
         for e in estudiantes:
             ultimo = e.obtener_ultimo_control()
             if ultimo:
                 estado = EvaluadorNutricional.clasificar_estado(ultimo.get_imc())
-                print(f"{e.nombre_completo} ({e.curso}) -> IMC: {ultimo.get_imc():.2f} | Estado: {estado}")
+                lineas.append(
+                    f"{e.nombre_completo} ({e.curso}) -> IMC: {ultimo.get_imc():.2f} | Estado: {estado}"
+                )
             else:
-                print(f"{e.nombre_completo} ({e.curso}) -> Sin controles")
+                lineas.append(f"{e.nombre_completo} ({e.curso}) -> Sin controles")
+
+        return "\n".join(lineas)

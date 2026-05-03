@@ -28,14 +28,14 @@ class EvaluadorNutricional:
         if len(controles) < 2:
             return False
         c1, c2 = controles[-2], controles[-1]
-        return abs(c2.peso - c1.peso) >= 5  # umbral simple
+        return abs(c2.peso.get_valor() - c1.peso.get_valor()) >= 5  # umbral simple
 
     @staticmethod
     def detectar_falta_crecimiento(controles) -> bool:
         if len(controles) < 2:
             return False
         c1, c2 = controles[-2], controles[-1]
-        return c2.talla <= c1.talla  # no crece
+        return c2.talla.get_valor() <= c1.talla.get_valor()  # no crece
 
     @staticmethod
     def detectar_obs_repetidas(controles) -> bool:

@@ -3,10 +3,14 @@ from typing import List
 
 class Estudiante(Persona):
 
-    def __init__(self, codigo: str, nombre_completo: str, edad: int, sexo: str, curso: str):
-        super().__init__(codigo, nombre_completo, edad, sexo)
+    def __init__(self, codigo: str, nombre_completo: str, fecha_nacimiento: str, sexo: str, curso: str):
+        super().__init__(codigo, nombre_completo, fecha_nacimiento, sexo)
         self.curso = curso
         self.controles: List = []
+
+    @property
+    def edad(self):
+        return self.calcular_edad()
 
     def agregar_control(self, control):
         self.controles.append(control)
