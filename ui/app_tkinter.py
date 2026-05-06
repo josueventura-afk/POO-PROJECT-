@@ -8,9 +8,7 @@ from tkinter import ttk, messagebox, scrolledtext
 from datetime import datetime
 import re
 
-# =========================
 # VALIDACIONES
-# =========================
 def validar_nombre(nombre):
     return re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúñÑ ]+", nombre)
 
@@ -89,11 +87,11 @@ class AppSaludEscolar:
 
         frame_salud.columnconfigure(1, weight=1)
 
-        ttk.Label(frame_salud, text="Peso").grid(row=0, column=0, sticky="w")
+        ttk.Label(frame_salud, text="Peso (kg)").grid(row=0, column=0, sticky="w")
         self.entry_peso = ttk.Entry(frame_salud)
         self.entry_peso.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
 
-        ttk.Label(frame_salud, text="Talla").grid(row=1, column=0, sticky="w")
+        ttk.Label(frame_salud, text="Talla (m)").grid(row=1, column=0, sticky="w")
         self.entry_talla = ttk.Entry(frame_salud)
         self.entry_talla.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
 
@@ -113,9 +111,8 @@ class AppSaludEscolar:
         ttk.Button(frame_rep, text="Abrir en Nueva Ventana",
                    command=self.abrir_reporte).pack()
 
-    # =========================
+
     # FUNCIONES
-    # =========================
 
     def registrar_estudiante(self):
         try:
