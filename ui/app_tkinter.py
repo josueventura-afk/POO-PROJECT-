@@ -2,202 +2,264 @@ from models.estudiante import Estudiante
 from models.control_salud import ControlSalud
 from models.medida import Peso, Talla
 from services.evaluador_nutricional import EvaluadorNutricional
+from utils.id_generator import generar_codigo
 
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
-from datetime import datetime
-import re
+from tkinter import ttk, messagebox
+from datetime import datetime, date
 
-# VALIDACIONES
-def validar_nombre(nombre):
-    return re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúñÑ ]+", nombre)
+# ===============================
+# INTERFAZ (CLASE PRINCIPAL)
+# ===============================
 
-
-# =========================
 class AppSaludEscolar:
 
     def __init__(self, root, sistema, reporte):
         self.root = root
-        self.root.title("Gestión de Salud Escolar")
-        self.root.geometry("520x750")
+        self.root.title("Sistema de Salud Escolar")
+        self.root.geometry("800x550")
+        self.root.configure(bg="#F5F7FA")
 
         self.sistema = sistema
         self.reporte = reporte
 
-        self.codigo_actual = None
-        self.entries = {}
+        self.frame_principal = tk.Frame(root, bg="#F5F7FA")
+        self.frame_principal.pack(fill="both", expand=True)
 
-        self.crear_widgets()
+        self.crear_menu()
+        self.vista_registrar_estudiante()
 
-    # =========================
-    def crear_widgets(self):
+    def limpiar_frame(self):
+        for widget in self.frame_principal.winfo_children():
+            widget.destroy()
 
-        # ===== REGISTRO =====
-        frame_est = ttk.LabelFrame(self.root, text="Registro de Estudiante", padding=10)
-        frame_est.pack(fill="x", padx=20, pady=10)
+    # ================ MENU ================
+    def crear_menu(self):
+        menu = tk.Menu(self.root)
 
-        frame_est.columnconfigure(1, weight=1)
+        menu.add_command(label="Registrar Estudiante", command=self.vista_registrar_estudiante)
+        menu.add_command(label="Registrar Control", command=self.vista_registrar_control)
+        menu.add_command(label="Lista de Estudiantes", command=self.vista_lista_estudiantes)
+
+        self.root.config(menu=menu)
+
+    # ================ REGISTRAR ESTUDIANTE ================
+    def vista_registrar_estudiante(self):
+        self.limpiar_frame()
+
+        tk.Label(self.frame_principal, text="Registrar Estudiante",
+                 font=("Arial", 16), bg="#F5F7FA").pack(pady=10)
+
+        self.entries_est = {}
+        campos = ["Nombre", "Fecha de Nacimiento (YYYY-MM-DD)", "Sexo", "Curso"]
 
         # Nombre
-        ttk.Label(frame_est, text="Nombre").grid(row=0, column=0, sticky="w")
-        self.entries["nombre"] = ttk.Entry(frame_est)
-        self.entries["nombre"].grid(row=0, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(self.frame_principal, text="Nombre", bg="#F5F7FA").pack()
+        entry_nombre = tk.Entry(self.frame_principal)
+        entry_nombre.pack()
+        self.entries_est["Nombre"] = entry_nombre
 
         # Fecha de Nacimiento
-        ttk.Label(frame_est, text="Fecha de Nacimiento (YYYY-MM-DD)").grid(row=1, column=0, sticky="w")
-        self.entries["fecha_nacimiento"] = ttk.Entry(frame_est)
-        self.entries["fecha_nacimiento"].grid(row=1, column=1, sticky="ew", padx=5, pady=2)
+        tk.Label(self.frame_principal, text="Fecha de Nacimiento (YYYY-MM-DD)", bg="#F5F7FA").pack()
+        entry_fecha = tk.Entry(self.frame_principal)
+        entry_fecha.pack()
+        self.entries_est["Fecha de Nacimiento"] = entry_fecha
 
-        # Sexo (RadioButtons)
-        ttk.Label(frame_est, text="Sexo").grid(row=2, column=0, sticky="w")
-
-        self.sexo_var = tk.StringVar(value="M")
-
-        frame_radio = ttk.Frame(frame_est)
-        frame_radio.grid(row=2, column=1, sticky="w")
-
-        ttk.Radiobutton(frame_radio, text="Masculino", variable=self.sexo_var, value="M").pack(side="left")
-        ttk.Radiobutton(frame_radio, text="Femenino", variable=self.sexo_var, value="F").pack(side="left")
+        # Sexo (Combobox)
+        tk.Label(self.frame_principal, text="Sexo", bg="#F5F7FA").pack()
+        combo_sexo = ttk.Combobox(self.frame_principal, values=["M", "F"], state="readonly")
+        combo_sexo.pack()
+        combo_sexo.current(0)
+        self.entries_est["Sexo"] = combo_sexo
 
         # Curso (Combobox)
-        ttk.Label(frame_est, text="Curso").grid(row=3, column=0, sticky="w")
-
-        self.entries["curso"] = ttk.Combobox(
-            frame_est,
-            values=[
-                "1ro Primaria",
-                "2do Primaria",
-                "3ro Primaria",
-                "4to Primaria",
-                "5to Primaria",
-                "6to Primaria"
-            ],
+        tk.Label(self.frame_principal, text="Curso", bg="#F5F7FA").pack()
+        combo_curso = ttk.Combobox(
+            self.frame_principal,
+            values=["1ro Primaria", "2do Primaria", "3ro Primaria", "4to Primaria", "5to Primaria", "6to Primaria"],
             state="readonly"
         )
-        self.entries["curso"].grid(row=3, column=1, sticky="ew", padx=5, pady=2)
-        self.entries["curso"].current(0)
+        combo_curso.pack()
+        combo_curso.current(0)
+        self.entries_est["Curso"] = combo_curso
 
-        # Botones
-        ttk.Button(frame_est, text="Registrar Estudiante",
-                   command=self.registrar_estudiante).grid(row=4, columnspan=2, pady=10)
+        tk.Button(self.frame_principal, text="Guardar",
+                  bg="#4CAF50", fg="white",
+                  command=self.guardar_estudiante).pack(pady=10)
 
-        # ===== CONTROL =====
-        frame_salud = ttk.LabelFrame(self.root, text="Control de Salud", padding=10)
-        frame_salud.pack(fill="x", padx=20, pady=10)
-
-        frame_salud.columnconfigure(1, weight=1)
-
-        ttk.Label(frame_salud, text="Peso (kg)").grid(row=0, column=0, sticky="w")
-        self.entry_peso = ttk.Entry(frame_salud)
-        self.entry_peso.grid(row=0, column=1, sticky="ew", padx=5, pady=2)
-
-        ttk.Label(frame_salud, text="Talla (m)").grid(row=1, column=0, sticky="w")
-        self.entry_talla = ttk.Entry(frame_salud)
-        self.entry_talla.grid(row=1, column=1, sticky="ew", padx=5, pady=2)
-
-        ttk.Button(frame_salud, text="Registrar Control",
-                   command=self.registrar_control).grid(row=2, columnspan=2, pady=10)
-
-        # ===== REPORTE =====
-        frame_rep = ttk.LabelFrame(self.root, text="Reporte", padding=10)
-        frame_rep.pack(fill="both", expand=True, padx=20, pady=10)
-
-        self.txt_reporte = scrolledtext.ScrolledText(frame_rep)
-        self.txt_reporte.pack(fill="both", expand=True)
-
-        ttk.Button(frame_rep, text="Mostrar Reporte",
-                   command=self.generar_reporte).pack(pady=5)
-
-        ttk.Button(frame_rep, text="Abrir en Nueva Ventana",
-                   command=self.abrir_reporte).pack()
-
-
-    # FUNCIONES
-
-    def registrar_estudiante(self):
+    def guardar_estudiante(self):
         try:
-            from utils.id_generator import generar_codigo
+            nombre = self.entries_est["Nombre"].get().strip()
+            fecha_nacimiento = self.entries_est["Fecha de Nacimiento"].get().strip()
+            sexo = self.entries_est["Sexo"].get()
+            curso = self.entries_est["Curso"].get()
 
-            nombre = self.entries["nombre"].get()
-            fecha_nacimiento = self.entries["fecha_nacimiento"].get().strip()
-            sexo = self.sexo_var.get()
+            if not nombre:
+                raise ValueError("El nombre es requerido")
 
-            if not validar_nombre(nombre):
-                raise ValueError("Nombre inválido (solo letras)")
-
-            try:
-                datetime.strptime(fecha_nacimiento, "%Y-%m-%d")
-            except ValueError:
-                raise ValueError("Formato de fecha inválido. Use YYYY-MM-DD")
+            # Validar formato de fecha
+            datetime.strptime(fecha_nacimiento, "%Y-%m-%d")
 
             codigo = generar_codigo()
-            self.codigo_actual = codigo
 
             est = Estudiante(
                 codigo,
                 nombre,
                 fecha_nacimiento,
                 sexo,
-                self.entries["curso"].get()
+                curso
             )
-
             self.sistema.registrar_estudiante(est)
 
-            messagebox.showinfo("OK", f"Registrado con código: {codigo}")
+            # Limpiar campos
+            self.entries_est["Nombre"].delete(0, tk.END)
+            self.entries_est["Fecha de Nacimiento"].delete(0, tk.END)
+            self.entries_est["Curso"].current(0)
 
-        except Exception as e:
+            messagebox.showinfo("Éxito", f"Estudiante registrado con código: {codigo}")
+
+        except ValueError as e:
             messagebox.showerror("Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al registrar: {str(e)}")
 
-    def registrar_control(self):
+    # ================ REGISTRAR CONTROL ================
+    def vista_registrar_control(self):
+        self.limpiar_frame()
+
+        tk.Label(self.frame_principal, text="Registrar Control",
+                 font=("Arial", 16), bg="#F5F7FA").pack(pady=10)
+
+        tk.Label(self.frame_principal, text="Estudiante", bg="#F5F7FA").pack()
+
+        self.combo = ttk.Combobox(self.frame_principal, state="readonly")
+        self.combo['values'] = [f"{e.codigo} - {e.nombre_completo}" for e in self.sistema.estudiantes]
+        self.combo.pack()
+
+        self.entries_ctrl = {}
+        campos = ["Peso (kg)", "Talla (m)", "Observación"]
+
+        for campo in campos:
+            tk.Label(self.frame_principal, text=campo, bg="#F5F7FA").pack()
+            entry = tk.Entry(self.frame_principal)
+            entry.pack()
+            self.entries_ctrl[campo] = entry
+
+        self.resultado_label = tk.Label(self.frame_principal, text="", bg="#F5F7FA", font=("Arial", 12))
+        self.resultado_label.pack(pady=10)
+
+        tk.Button(self.frame_principal, text="Resultado",
+                  bg="#FF9800", fg="white",
+                  command=self.calcular_resultado).pack(pady=5)
+
+        tk.Button(self.frame_principal, text="Guardar",
+                  bg="#2196F3", fg="white",
+                  command=self.guardar_control).pack(pady=5)
+
+    def calcular_resultado(self):
         try:
-            from datetime import date
+            peso_val = float(self.entries_ctrl["Peso (kg)"].get())
+            talla_val = float(self.entries_ctrl["Talla (m)"].get())
 
-            if not self.codigo_actual:
-                raise ValueError("Primero registra un estudiante")
-
-            peso = Peso(float(self.entry_peso.get()))
-            talla = Talla(float(self.entry_talla.get()))
+            peso = Peso(peso_val)
+            talla = Talla(talla_val)
 
             control = ControlSalud(
-                str(date.today()),
+                date.today(),
                 peso,
-                talla
+                talla,
+                self.entries_ctrl["Observación"].get()
             )
 
-            estudiante = self.sistema.buscar_estudiante(self.codigo_actual)
+            imc = round(control.calcular_imc(), 2)
+            estado = EvaluadorNutricional.clasificar_estado(imc)
+
+            self.resultado_label.config(text=f"IMC: {imc} | Estado: {estado}")
+        except ValueError:
+            self.resultado_label.config(text="Datos inválidos")
+        except Exception as e:
+            self.resultado_label.config(text=f"Error: {str(e)}")
+
+    def guardar_control(self):
+        try:
+            if not self.combo.get():
+                raise ValueError("Debe seleccionar un estudiante")
+
+            codigo = self.combo.get().split(" - ")[0]
+            peso_val = float(self.entries_ctrl["Peso (kg)"].get())
+            talla_val = float(self.entries_ctrl["Talla (m)"].get())
+
+            peso = Peso(peso_val)
+            talla = Talla(talla_val)
+
+            control = ControlSalud(
+                date.today(),
+                peso,
+                talla,
+                self.entries_ctrl["Observación"].get()
+            )
+
+            estudiante = self.sistema.buscar_estudiante(codigo)
             if not estudiante:
                 raise ValueError("Estudiante no encontrado")
+
             estudiante.agregar_control(control)
 
-            registro = (
-                f"- Fecha: {control.fecha} | Fecha de nacimiento: {estudiante.fecha_nacimiento} | "
-                f"Edad: {estudiante.edad} | Peso: {control.peso.get_valor():.2f} {control.peso.get_unidad()} | "
-                f"Talla: {control.talla.get_valor():.2f} {control.talla.get_unidad()} | "
-                f"IMC: {control.get_imc():.2f} | Estado: {EvaluadorNutricional.clasificar_estado(control.get_imc())}"
-            )
-            self.txt_reporte.delete(1.0, tk.END)
-            self.txt_reporte.insert(tk.END, registro)
+            # Limpiar campos
+            for e in self.entries_ctrl.values():
+                e.delete(0, tk.END)
+            self.combo.set("")
 
-            messagebox.showinfo("OK", "Control registrado")
+            messagebox.showinfo("Éxito", "Control registrado correctamente")
 
-        except Exception as e:
+        except ValueError as e:
             messagebox.showerror("Error", str(e))
-
-    def generar_reporte(self):
-        try:
-            if not self.codigo_actual:
-                raise ValueError("No hay estudiante seleccionado")
-
-            estudiante = self.sistema.buscar_estudiante(self.codigo_actual)
-            if not estudiante:
-                raise ValueError("Estudiante no encontrado")
-
-            reporte_texto = self.reporte.generar_reporte_individual(estudiante)
-            self.txt_reporte.delete(1.0, tk.END)
-            self.txt_reporte.insert(tk.END, reporte_texto)
-
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("Error", f"Error al registrar: {str(e)}")
+
+    # ================ LISTA ================
+    def vista_lista_estudiantes(self):
+        self.limpiar_frame()
+
+        tk.Label(self.frame_principal, text="Lista de Estudiantes",
+                 font=("Arial", 16), bg="#F5F7FA").pack(pady=10)
+
+        frame_tabla = tk.Frame(self.frame_principal, bg="#F5F7FA")
+        frame_tabla.pack(fill="both", expand=True, padx=10, pady=10)
+
+        scroll = tk.Scrollbar(frame_tabla)
+        scroll.pack(side="right", fill="y")
+
+        tabla = ttk.Treeview(
+            frame_tabla,
+            columns=("Codigo", "Nombre", "Edad", "Curso", "IMC", "Estado"),
+            show="headings",
+            yscrollcommand=scroll.set
+        )
+
+        scroll.config(command=tabla.yview)
+
+        columnas = ("Codigo", "Nombre", "Edad", "Curso", "IMC", "Estado")
+
+        for col in columnas:
+            tabla.heading(col, text=col)
+            tabla.column(col, width=100)
+
+        tabla.pack(fill="both", expand=True)
+
+        for est in self.sistema.estudiantes:
+            ultimo_control = est.obtener_ultimo_control()
+            imc = round(ultimo_control.get_imc(), 2) if ultimo_control else "N/A"
+            estado = EvaluadorNutricional.clasificar_estado(imc) if ultimo_control else "N/A"
+
+            tabla.insert("", "end", values=(
+                est.codigo,
+                est.nombre_completo,
+                est.edad,
+                est.curso,
+                imc,
+                estado
+            ))
 
     def abrir_reporte(self):
         try:
