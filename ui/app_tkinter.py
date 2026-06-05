@@ -5,7 +5,7 @@ from services.evaluador_nutricional import EvaluadorNutricional
 from utils.id_generator import generar_codigo
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, scrolledtext
 from datetime import datetime, date
 
 # ===============================
@@ -22,6 +22,7 @@ class AppSaludEscolar:
 
         self.sistema = sistema
         self.reporte = reporte
+        self.codigo_actual = None
 
         self.frame_principal = tk.Frame(root, bg="#F5F7FA")
         self.frame_principal.pack(fill="both", expand=True)
@@ -32,6 +33,17 @@ class AppSaludEscolar:
     def limpiar_frame(self):
         for widget in self.frame_principal.winfo_children():
             widget.destroy()
+
+    def obtener_estudiantes_combobox(self):
+        return [f"{e.codigo} - {e.nombre_completo}" for e in self.sistema.estudiantes]
+
+    def actualizar_combo_estudiantes(self, combo):
+        combo['values'] = self.obtener_estudiantes_combobox()
+        if combo['values']:
+            combo.current(0)
+
+    def actualizar_lista_estudiantes(self):
+        self.vista_lista_estudiantes()
 
     # ================ MENU ================
     def crear_menu(self):
@@ -117,6 +129,8 @@ class AppSaludEscolar:
             self.entries_est["Curso"].current(0)
 
             messagebox.showinfo("Éxito", f"Estudiante registrado con código: {codigo}")
+            if hasattr(self, "combo"):
+                self.actualizar_combo_estudiantes(self.combo)
 
         except ValueError as e:
             messagebox.showerror("Error", str(e))
@@ -133,7 +147,7 @@ class AppSaludEscolar:
         tk.Label(self.frame_principal, text="Estudiante", bg="#F5F7FA").pack()
 
         self.combo = ttk.Combobox(self.frame_principal, state="readonly")
-        self.combo['values'] = [f"{e.codigo} - {e.nombre_completo}" for e in self.sistema.estudiantes]
+        self.actualizar_combo_estudiantes(self.combo)
         self.combo.pack()
 
         self.entries_ctrl = {}
@@ -199,11 +213,7 @@ class AppSaludEscolar:
                 self.entries_ctrl["Observación"].get()
             )
 
-            estudiante = self.sistema.buscar_estudiante(codigo)
-            if not estudiante:
-                raise ValueError("Estudiante no encontrado")
-
-            estudiante.agregar_control(control)
+            self.sistema.registrar_control(codigo, control)
 
             # Limpiar campos
             for e in self.entries_ctrl.values():
@@ -247,6 +257,13 @@ class AppSaludEscolar:
 
         tabla.pack(fill="both", expand=True)
 
+        def seleccionar_estudiante(event):
+            seleccion = tabla.selection()
+            if seleccion:
+                self.codigo_actual = tabla.item(seleccion[0])["values"][0]
+
+        tabla.bind("<<TreeviewSelect>>", seleccionar_estudiante)
+
         for est in self.sistema.estudiantes:
             ultimo_control = est.obtener_ultimo_control()
             imc = round(ultimo_control.get_imc(), 2) if ultimo_control else "N/A"
@@ -260,6 +277,8 @@ class AppSaludEscolar:
                 imc,
                 estado
             ))
+
+        tk.Button(self.frame_principal, text="Generar Reporte", bg="#2196F3", fg="white", command=self.abrir_reporte).pack(pady=8)
 
     def abrir_reporte(self):
         try:
