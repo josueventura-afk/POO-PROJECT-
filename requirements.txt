@@ -1,2 +1,4 @@
 SQLAlchemy>=1.4
 pyodbc
+customtkinter
+reportlab

@@ -1,6 +1,10 @@
 from datetime import date
 from services.evaluador_nutricional import EvaluadorNutricional
 
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+import os
+
 class Reporte:
 
     def __init__(self, formato: str = "PDF"):
@@ -67,3 +71,48 @@ class Reporte:
                 lineas.append(f"{e.nombre_completo} ({e.curso}) -> Sin controles")
 
         return "\n".join(lineas)
+    
+    def exportar_pdf_individual(self, estudiante):
+
+        texto = self.generar_reporte_individual(estudiante)
+
+        os.makedirs("reportes", exist_ok=True)
+
+        archivo = f"reportes/Reporte_{estudiante.codigo}.pdf"
+
+        pdf = SimpleDocTemplate(archivo)
+
+        estilos = getSampleStyleSheet()
+
+        contenido = [
+            Paragraph("Reporte Individual de Salud Escolar", estilos["Title"]),
+            Spacer(1, 12),
+            Paragraph(texto.replace("\n", "<br/>"), estilos["Normal"])
+        ]
+
+        pdf.build(contenido)
+
+        return archivo
+
+
+    def exportar_pdf_general(self, estudiantes):
+
+        texto = self.generar_reporte_general(estudiantes)
+
+        os.makedirs("reportes", exist_ok=True)
+
+        archivo = "reportes/Reporte_General.pdf"
+
+        pdf = SimpleDocTemplate(archivo)
+
+        estilos = getSampleStyleSheet()
+
+        contenido = [
+            Paragraph("Reporte General de Salud Escolar", estilos["Title"]),
+            Spacer(1, 12),
+            Paragraph(texto.replace("\n", "<br/>"), estilos["Normal"])
+        ]
+
+        pdf.build(contenido)
+
+        return archivo
